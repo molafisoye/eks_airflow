@@ -17,4 +17,7 @@ This repo allows the creation of an apache airflow cluster in AWS EKS. The confi
 1. Open the folder on th local machine
 2. In the eks directory, run - 
    ```./run.sh {terraform workspace} {cluster-name} {region}```
-3. Once the script is complete copy the output url and use the username and password details specified.
+3. When prompted, if all the resources to be created look good then enter "yes"
+4. Once the script is complete copy the output url and use the username and password details specified to log into your airflow cluster.
+
+To integrate this into jenkins these scripts can be run in an automated fashion via the ./run.sh entry point.

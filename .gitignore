@@ -21,3 +21,4 @@ modules.xml
 
 # Ignore CLI configuration files
 terraform/.terraform
+terraform.*

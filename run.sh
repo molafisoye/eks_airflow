@@ -22,6 +22,8 @@ aws ecr get-login-password \
   --password-stdin \
   $AOK_AIRFLOW_REPOSITORY
 
+aws eks update-kubeconfig --name $2 --region $3
+
 docker build -t $AOK_AIRFLOW_REPOSITORY .
 
 if [ -z "$4" ]
@@ -36,17 +38,11 @@ fi
 ./../kube/deploy.sh
 
 echo "................................................................................."
-echo ""
 echo "................................................................................."
-echo ""
 echo "................................................................................."
-
-echo "airflow web ui URL -"
-echo "http://$(kubectl get service airflow -n airflow \
-  -o jsonpath="{.status.loadBalancer.ingress[].hostname}"):8080\login"
-
+echo "airflow web ui url -"
+echo "http://$(kubectl get service airflow -n airflow -o jsonpath="{.status.loadBalancer.ingress[].hostname}"):8080\login"
 echo "username - eksuser"
 echo "password - ekspassword"
-echo ""
 echo "................................................................................."
 echo "RESET THE ABOVE ONCE LOGGED IN"
