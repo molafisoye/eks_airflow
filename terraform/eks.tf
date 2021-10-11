@@ -1,97 +1,49 @@
+data "aws_eks_cluster" "cluster" {
+  name = module.eks.cluster_id
+}
 
-resource "aws_iam_role" "eks_cluster" {
-  name = "eks-cluster"
+data "aws_eks_cluster_auth" "cluster" {
+  name = module.eks.cluster_id
+}
 
-  assume_role_policy = <<POLICY
-{
-  "Version": "2012-10-17",
-  "Statement": [
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
+  token                  = data.aws_eks_cluster_auth.cluster.token
+}
+
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "17.20.0"
+
+  cluster_name    = var.cluster_name
+  cluster_version = "1.21"
+  subnets         = module.vpc.private_subnets
+
+  vpc_id = module.vpc.vpc_id
+
+  worker_groups = [
     {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "eks.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
+      name                 = "on-demand-1"
+      instance_type        = "t2.micro"
+      asg_max_size         = 2
+      asg_desired_capacity = 1
+      kubelet_extra_args   = "--node-labels=spot=false"
+      suspended_processes  = ["AZRebalance"]
     }
   ]
-}
-POLICY
-}
 
-resource "aws_iam_role_policy_attachment" "AmazonEKSClusterPolicy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = aws_iam_role.eks_cluster.name
-}
-
-resource "aws_iam_role_policy_attachment" "AmazonEKSServicePolicy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
-  role       = aws_iam_role.eks_cluster.name
-}
-
-resource "aws_eks_cluster" "aws_eks" {
-  name     = "eks_cluster_airflow"
-  role_arn = aws_iam_role.eks_cluster.arn
-
-  vpc_config {
-    subnet_ids = ["subnet-4d0d3324", "subnet-b3a8f9c8"]
-  }
-
-  tags = {
-    Name = "EKS_AIRFLOW"
-  }
-}
-
-resource "aws_iam_role" "eks_nodes" {
-  name = "eks-node-group"
-
-  assume_role_policy = <<POLICY
-{
-  "Version": "2012-10-17",
-  "Statement": [
+  worker_groups_launch_template = [
     {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "ec2.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
+      name                    = "spot-1"
+      override_instance_types = ["t2.small", "m5.large", "m5a.large", "m5d.large", "m5ad.large"]
+      spot_instance_pools     = 2
+      asg_max_size            = 2
+      asg_desired_capacity    = 1
+      kubelet_extra_args      = "--node-labels=node.kubernetes.io/lifecycle=spot"
+      public_ip               = true
+    },
   ]
-}
-POLICY
-}
 
-resource "aws_iam_role_policy_attachment" "AmazonEKSWorkerNodePolicy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.eks_nodes.name
-}
-
-resource "aws_iam_role_policy_attachment" "AmazonEKS_CNI_Policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.eks_nodes.name
-}
-
-resource "aws_iam_role_policy_attachment" "AmazonEC2ContainerRegistryReadOnly" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.eks_nodes.name
-}
-
-resource "aws_eks_node_group" "node" {
-  cluster_name    = aws_eks_cluster.aws_eks.name
-  node_group_name = "airflow_node_group"
-  node_role_arn   = aws_iam_role.eks_nodes.arn
-  subnet_ids      = ["<subnet-1>", "<subnet-2>"]
-
-  scaling_config {
-    desired_size = 1
-    max_size     = 1
-    min_size     = 1
-  }
-
-  # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
-  # Otherwise, EKS will not be able to properly delete EC2 Instances and Elastic Network Interfaces.
-  depends_on = [
-    aws_iam_role_policy_attachment.AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.AmazonEKS_CNI_Policy,
-    aws_iam_role_policy_attachment.AmazonEC2ContainerRegistryReadOnly,
-  ]
+  write_kubeconfig = true
 }
