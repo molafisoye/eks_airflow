@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 
-set -x
+#set -x
 
 echo "Airflow Image Repo" $AOK_AIRFLOW_REPOSITORY
 echo "EFS File System ID" $AOK_EFS_FS_ID

@@ -16,7 +16,7 @@ terraform apply -var cluster_name=$2 -var region=$3 && exportEnvVars
 cd ../docker
 
 aws ecr get-login-password \
-  --region $3 | \
+  --region us-east-2| \
   docker login \
   --username AWS \
   --password-stdin \
