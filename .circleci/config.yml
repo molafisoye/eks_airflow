@@ -1,0 +1,37 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/2.0/configuration-reference
+version: 2.1
+
+# Define a job to be invoked later in a workflow.
+# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
+jobs:
+ create-datadog-resources:
+    description: Create datadog resources using terraform 
+    docker:
+      - image: hashicorp/terraform:light
+    steps:
+      - run: |
+          apk update && apk add bash
+      - run:
+          name: terraform apply
+          working_directory: ../
+          shell: "/bin/bash -eo pipefail"
+          command: |
+            rm -rf .terraform
+            terraform init
+            terraform fmt
+            terraform validate
+            terraform plan --var-file=var/datadog.tfvars -var='datadog_api_key=x' -var='datadog_app_key=xx'
+            terraform apply -auto-approve --var-file=var/datadog.tfvars -var='datadog_api_key=x' -var='datadog_app_key=xx'
+
+
+# Invoke jobs via workflows
+# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
+workflows:
+  datadog-wf:
+      jobs:
+        - create-datadog-resources:
+            filters:
+              branches:
+                only:
+                  - develop
