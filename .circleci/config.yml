@@ -10,6 +10,7 @@ jobs:
     docker:
       - image: hashicorp/terraform:light
     steps:
+      - checkout
       - run: |
           apk update && apk add bash
       - run:
@@ -17,6 +18,8 @@ jobs:
           working_directory: ../
           shell: "/bin/bash -eo pipefail"
           command: |
+            pwd 
+            ll
             rm -rf .terraform
             terraform init
             terraform fmt
