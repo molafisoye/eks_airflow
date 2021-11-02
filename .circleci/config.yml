@@ -20,6 +20,9 @@ jobs:
           command: |
             pwd 
             ls -al
+            cd project
+            pwd 
+            ls -al
             rm -rf .terraform
             terraform init
             terraform fmt
